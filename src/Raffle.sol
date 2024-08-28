@@ -15,7 +15,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // just to make erros more readable errors are written
     // in following structure
     // error CONTRACTNAME_CUSTOMERROR();
-    error Reffle__SendMoreToEnterRaffle();
+    error Raffle__SendMoreToEnterRaffle();
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
     error Raffle__UpkeepNotNeeded(
@@ -50,6 +50,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     // indexed topics cost more gas than non-indexed one
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     // if topic is not indexed then you need ABI to decode in
     // it so if we want to make it very gas efficient we can
@@ -90,7 +91,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // right now, custom errors with conditionals is the way to go and
         // gas efficient
         if (msg.value < i_entranceFee) {
-            revert Reffle__SendMoreToEnterRaffle();
+            revert Raffle__SendMoreToEnterRaffle();
         }
 
         if (s_raffleState != RaffleState.OPEN) {
@@ -126,9 +127,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return (upkeepNeeded, hex"");
     }
 
-    function performUpkeep(
-        bytes calldata /* performData */
-    ) external returns (uint256 requestId) {
+    function performUpkeep(bytes calldata /* performData */) external {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
             revert Raffle__UpkeepNotNeeded(
@@ -151,7 +150,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 )
             });
 
-        requestId = s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        emit RequestedRaffleWinner(requestId);
     }
 
     function fulfillRandomWords(
@@ -182,5 +182,21 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getRaffleState() external view returns (RaffleState) {
+        return s_raffleState;
+    }
+
+    function getPlayer(uint256 indexOfPlayer) external view returns (address) {
+        return s_players[indexOfPlayer];
+    }
+
+    function getLastTimestamp() external view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
     }
 }
